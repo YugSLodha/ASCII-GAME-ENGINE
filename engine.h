@@ -1,3 +1,4 @@
+#pragma once
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
@@ -12,10 +13,8 @@ int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
 int CELL_SIZE = std::min(screenWidth / COLS, screenHeight / ROWS);
+
 static HFONT gFont = NULL;
-static HDC gMemDC = NULL;
-static HBITMAP gMemBitmap = NULL;
-static HBITMAP gOldBitmap = NULL;
 
 void CreateScaledFont(int cellSize) {
     int fontHeight = (int)(cellSize * 0.9f);
@@ -33,6 +32,10 @@ void CreateScaledFont(int cellSize) {
         L"Terminal"
     );
 }
+
+static HDC gMemDC = NULL;
+static HBITMAP gMemBitmap = NULL;
+static HBITMAP gOldBitmap = NULL;
 
 LRESULT CALLBACK DisplayWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg)
@@ -113,6 +116,35 @@ HWND CreateDisplayWindow(HINSTANCE hInstance) {
         hInstance,
         NULL
     );
+}
+
+static LARGE_INTEGER g_Freq;
+static LARGE_INTEGER g_Last;
+static bool g_TimeInitialized = false;
+
+static double Tick(double targetFPS) {
+    if (!g_TimeInitialized) {
+        QueryPerformanceFrequency(&g_Freq);
+        QueryPerformanceCounter(&g_Last);
+        g_TimeInitialized = true;
+        return 0.0;
+    }
+
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+
+    double dt = (double)(now.QuadPart - g_Last.QuadPart) / g_Freq.QuadPart;
+
+    double targetFrame = 1.0 / targetFPS;
+
+    while (dt < targetFrame) {
+        Sleep(0);
+        QueryPerformanceCounter(&now);
+        dt = (double)(now.QuadPart - g_Last.QuadPart) / g_Freq.QuadPart;
+    }
+
+    g_Last = now;
+    return dt;
 }
 
 #endif
