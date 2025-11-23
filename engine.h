@@ -24,7 +24,7 @@ extern std::vector<std::wstring> grid;
 int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 int CELL_SIZE;
-void InnitCell() { CELL_SIZE = std::min(screenWidth / COLS, screenHeight / ROWS); }
+void InitCell() { CELL_SIZE = std::min(screenWidth / COLS, screenHeight / ROWS); }
 
 static HFONT gFont = NULL;
 static int gFontAdvance = 0;
@@ -57,7 +57,7 @@ void ClearGrid() {
         std::fill(grid[y].begin(), grid[y].end(), L' ');
 }
 
-void InnitGrid() { grid.resize(ROWS, std::wstring(COLS, L' ')); }
+void InitGrid() { grid.resize(ROWS, std::wstring(COLS, L' ')); }
 
 
 
@@ -176,5 +176,88 @@ static double Tick(double targetFPS) {
     g_Last = now;
     return dt;
 }
+
+
+
+// GAME OBJECTS
+class Sprite {
+public:
+    int width = 0;
+    int height = 0;
+    std::vector<std::wstring> data;
+    wchar_t transparent = L' ';
+
+    Sprite() {}
+
+    Sprite(const std::vector<std::wstring>& lines, wchar_t transparentChar = L' ')
+        : data(lines), transparent(transparentChar)
+    {
+        height = (int)lines.size();
+        width = height > 0 ? (int)lines[0].size() : 0;
+    }
+
+    Sprite(const std::wstring& raw, wchar_t transparentChar = L' ') 
+        : transparent(transparentChar)
+    {
+        parse(raw);
+    }
+
+    void draw(int xpos, int ypos) const {
+        for (int y = 0; y < height; y++) {
+            int gy = ypos + y;
+            if (gy < 0 || gy >= ROWS) continue;
+
+            for (int x = 0; x < width; x++) {
+                int gx = xpos + x;
+                if (gx < 0 || gx >= COLS) continue;
+
+                wchar_t c = data[y][x];
+                if (c != transparent)
+                    grid[gy][gx] = c;
+            }
+        }
+    }
+
+private:
+    void parse(const std::wstring& raw) {
+        data.clear();
+        std::wstring line;
+
+        for (wchar_t c : raw) {
+            if (c == L'\n') {
+                data.push_back(line);
+                line.clear();
+            } else {
+                line.push_back(c);
+            }
+        }
+        if (!line.empty()) data.push_back(line);    
+
+        height = (int)data.size();
+        width = height > 0 ? (int)data[0].size() : 0;
+    }
+};
+
+
+
+// =========================
+// DRAWING
+// =========================
+void drawChar(wchar_t letter, int xpos, int ypos) {
+    grid[ypos][xpos] = letter;
+}
+
+void drawString(const std::wstring& text, int xpos, int ypos) {
+    if (ypos < 0 || ypos >= ROWS) return;
+
+    int x = xpos;
+    for (wchar_t c : text) {
+        if (x >= 0 && x < COLS)
+            grid[ypos][x] = c;
+        x++;
+        if (x >= COLS) break;
+    }
+}
+
 
 #endif
